@@ -1,0 +1,20 @@
+.env
+.env.*
+!**/.env.*.example
+.square-tokens.json
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+data/
+
+# trained artifacts - regenerate with `python -m training.train`
+models/*.pt
+models/*.json
+
+# each connected restaurant's data and model
+workspaces/
+
+# signing key for sessions and oauth state
+.app-secret
+.DS_Store

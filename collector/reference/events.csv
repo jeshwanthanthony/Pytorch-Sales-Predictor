@@ -1,0 +1,6 @@
+name,category,venue,start_date,end_date,start_time,distance_miles,expected_attendance,notes
+Nationals home game,sports,Nationals Park,2026-08-14,2026-08-14,19:05,4.2,32000,sample row - replace with real schedule
+Commanders home game,sports,Northwest Stadium,2026-09-13,2026-09-13,13:00,12.0,58000,sample row
+Capitals home game,sports,Capital One Arena,2026-10-11,2026-10-11,19:00,5.1,18000,sample row
+Arlington County Fair,festival,Thomas Jefferson Center,2026-08-19,2026-08-23,11:00,1.4,50000,sample row - multi-day
+Rosslyn Jazz Festival,concert,Gateway Park,2026-09-12,2026-09-12,13:00,2.0,8000,sample row

@@ -1,0 +1,34 @@
+services:
+  app:
+    build:
+      context: ..
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      PORT: "8080"
+      WORKSPACES_DIR: /var/lib/restaurant-forecast/workspaces
+    volumes:
+      - forecast-data:/var/lib/restaurant-forecast
+    expose:
+      - "8080"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  forecast-data:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tomorrow's Sales</title>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<header>
+  <h1>Tomorrow's sales</h1>
+  <p id="subtitle" class="muted"></p>
+</header>
+
+<main>
+  <p id="banner" class="banner hidden"></p>
+
+  <!-- 1. nobody connected yet. no numbers on this screen, on purpose. -->
+  <section id="view-connect" class="panel welcome hidden">
+    <h2 class="plain">Connect your Square account</h2>
+    <p>
+      We read your past sales, add the weather and the calendar, and learn your
+      pattern. Then we tell you what tomorrow looks like.
+    </p>
+    <p class="muted small">
+      Read only. We never move money and never change anything in your account.
+      You can disconnect and delete everything at any time.
+    </p>
+    <div id="square-config" class="notice muted small">Checking Square setup…</div>
+    <a class="button" href="/api/square/connect">Connect Square</a>
+  </section>
+
+  <!-- 2. retained for accounts that need a manual history recheck. -->
+  <section id="view-data" class="hidden">
+    <div class="panel">
+      <h2>What we found in your Square</h2>
+      <div id="preview-loading" class="muted">reading your account…</div>
+      <div id="preview" class="hidden">
+        <div class="stats">
+          <div><span id="stat-days" class="stat">—</span><label>days with sales</label></div>
+          <div><span id="stat-orders" class="stat">—</span><label>orders</label></div>
+          <div><span id="stat-total" class="stat">—</span><label>total sales</label></div>
+          <div><span id="stat-avg" class="stat">—</span><label>average day</label></div>
+        </div>
+        <p id="preview-range" class="muted"></p>
+      </div>
+    </div>
+
+    <div id="ready-to-predict" class="panel hidden">
+      <h2 class="plain">Ready</h2>
+      <p class="muted">
+        We will train a model on your history and forecast tomorrow. Takes a couple of minutes.
+      </p>
+      <button id="predict-button" class="button">Predict tomorrow's sales</button>
+    </div>
+
+    <div id="not-enough" class="panel hidden">
+      <h2 class="plain">Not enough history yet</h2>
+      <p id="not-enough-text" class="muted"></p>
+      <p class="muted small">
+        A forecast learns from your weekly rhythm. Without enough weeks there is no
+        rhythm to learn, and any number we showed you would be made up.
+      </p>
+      <button id="recheck" class="button ghost">Check again</button>
+    </div>
+  </section>
+
+  <!-- 3. building it -->
+  <section id="view-setup" class="panel hidden">
+    <h2 class="plain">Building your forecast</h2>
+    <p class="muted">The pipeline is running in the background.</p>
+    <ol id="setup-steps" class="steps"></ol>
+    <p id="setup-error" class="verdict lose hidden"></p>
+    <button id="retry" class="button ghost hidden">Try again</button>
+  </section>
+
+  <section id="pipeline-console" class="terminal-panel hidden" aria-live="polite">
+    <div class="terminal-titlebar">
+      <span>restaurant-forecast pipeline</span>
+      <span id="terminal-state">idle</span>
+    </div>
+    <div id="terminal-output" class="terminal-output"></div>
+    <div id="pipeline-tables" class="terminal-tables"></div>
+  </section>
+
+  <!-- 4. the forecast -->
+  <div id="view-forecast" class="hidden">
+    <section class="cards">
+      <article class="card headline">
+        <h2>Tomorrow</h2>
+        <p id="predicted" class="big">—</p>
+        <p id="prediction-date" class="muted"></p>
+        <p id="interval" class="muted"></p>
+      </article>
+
+      <article class="card">
+        <h2>Confidence</h2>
+        <p id="confidence" class="big">—</p>
+        <div class="meter"><div id="confidence-bar"></div></div>
+        <p id="uncertainty" class="muted"></p>
+      </article>
+
+      <article class="card">
+        <h2>Expected orders</h2>
+        <p id="orders" class="big">—</p>
+        <p class="muted">estimated from your recent average ticket, not predicted directly</p>
+      </article>
+    </section>
+
+    <section class="panel">
+      <h2>What drove this prediction</h2>
+      <p class="muted">How much each thing moved the answer. A guide, not a cause.</p>
+      <ul id="features" class="features"></ul>
+    </section>
+
+    <section class="panel">
+      <h2>Actual vs predicted</h2>
+      <p class="muted">Days the model never trained on, so this is an honest look.</p>
+      <div id="chart" class="chart"></div>
+      <p class="legend">
+        <span class="swatch actual"></span> actual
+        <span class="swatch predicted"></span> predicted
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2>How good is it</h2>
+      <table id="metrics">
+        <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <h3>Against the simple guesses</h3>
+      <table id="baselines">
+        <thead><tr><th>Baseline</th><th>Its typical miss</th><th>We beat it by</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p id="verdict" class="verdict"></p>
+    </section>
+  </div>
+
+  <section id="account" class="panel account hidden">
+    <h2>Accounts</h2>
+    <ul id="account-list" class="accounts"></ul>
+    <p id="account-line" class="muted"></p>
+    <a class="button ghost" href="/api/square/connect">Connect another Square account</a>
+    <button id="rerun" class="button ghost">Update with latest sales</button>
+    <button id="disconnect" class="button ghost danger">Disconnect and delete my data</button>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

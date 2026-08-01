@@ -1,0 +1,5 @@
+name,channel,discount_type,discount_value,start_date,end_date,spend_usd,applies_to,notes
+Lunch special 11-2,in_store,amount,3.00,2026-06-01,2026-12-31,0,lunch menu,sample row - recurring weekday special
+Summer Facebook campaign,facebook_ads,none,0,2026-07-01,2026-07-31,450,all,sample row
+UberEats 20% off,ubereats,percent,20,2026-07-15,2026-07-22,0,delivery,sample row
+Email coupon $5 off $30,email,amount,5.00,2026-08-01,2026-08-07,0,all,sample row
