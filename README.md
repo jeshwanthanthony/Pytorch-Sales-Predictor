@@ -1,4 +1,5 @@
-# Restaurant Forecast AI
+# Pytorch-Sales-Predictor
+
 
 This is a small sales forecasting app for restaurants that use Square. A user
 connects their Square account, the app cleans their sales history, and a
