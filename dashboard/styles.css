@@ -91,7 +91,7 @@ h2.plain { font-size: 1.15rem; text-transform: none; letter-spacing: -.01em;
            color: var(--text); margin-bottom: .5rem; }
 .small { font-size: .8rem; }
 
-.welcome { max-width: 34rem; margin: 3rem auto; text-align: center; }
+.welcome { max-width: 24rem; margin: 5rem auto; text-align: center; }
 .welcome p { color: var(--muted); }
 
 .button {

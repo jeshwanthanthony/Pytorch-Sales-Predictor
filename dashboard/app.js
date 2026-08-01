@@ -35,10 +35,12 @@ async function route() {
 
   if (!session.connected) {
     showOnly("view-connect");
+    el("page-title").textContent = "Connect Square";
     el("subtitle").textContent = "";
     return;
   }
 
+  el("page-title").textContent = "Tomorrow's sales";
   el("subtitle").textContent = session.business_name
     ? `${session.business_name} · Square ${session.environment}`
     : `Square ${session.environment}`;
@@ -80,25 +82,20 @@ function renderSquareConfig(config) {
   if (!box) return;
 
   if (!config.ok && config.error) {
+    show("square-config", true);
     box.className = "notice bad";
     box.textContent = config.error;
     return;
   }
 
-  if (config.environment === "production") {
-    box.className = config.ok ? "notice good" : "notice bad";
-    box.innerHTML = config.ok
-      ? `Production OAuth is configured. Redirect: <code>${config.redirect_url}</code>`
-      : config.warnings.map((warning) => `<p>${warning}</p>`).join("");
+  if (!config.ok) {
+    show("square-config", true);
+    box.className = "notice bad";
+    box.innerHTML = config.warnings.map((warning) => `<p>${warning}</p>`).join("");
     return;
   }
 
-  box.className = "notice";
-  box.innerHTML = `
-    <p>Sandbox mode is active. This only connects Square sandbox seller test accounts.</p>
-    <p>For a real Square seller account, switch .env to production credentials and use an HTTPS redirect URL.</p>
-    <p><code>${config.redirect_url}</code></p>
-  `;
+  show("square-config", false);
 }
 
 // -- more than one restaurant on this machine -------------------------------

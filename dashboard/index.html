@@ -9,25 +9,16 @@
 <body>
 
 <header>
-  <h1>Tomorrow's sales</h1>
+  <h1 id="page-title">Connect Square</h1>
   <p id="subtitle" class="muted"></p>
 </header>
 
 <main>
   <p id="banner" class="banner hidden"></p>
 
-  <!-- 1. nobody connected yet. no numbers on this screen, on purpose. -->
-  <section id="view-connect" class="panel welcome hidden">
-    <h2 class="plain">Connect your Square account</h2>
-    <p>
-      We read your past sales, add the weather and the calendar, and learn your
-      pattern. Then we tell you what tomorrow looks like.
-    </p>
-    <p class="muted small">
-      Read only. We never move money and never change anything in your account.
-      You can disconnect and delete everything at any time.
-    </p>
-    <div id="square-config" class="notice muted small">Checking Square setup…</div>
+  <section id="view-connect" class="welcome hidden">
+    <p class="muted">Connect your Square account to continue.</p>
+    <div id="square-config" class="notice bad small hidden"></div>
     <a class="button" href="/api/square/connect">Connect Square</a>
   </section>
 

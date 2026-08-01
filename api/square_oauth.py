@@ -55,44 +55,61 @@ class OAuthConfig:
     def from_env(cls) -> OAuthConfig:
         import os
 
-        app_id = os.environ.get("SQUARE_APPLICATION_ID")
-        secret = os.environ.get("SQUARE_APPLICATION_SECRET")
+        app_id = (os.environ.get("SQUARE_APPLICATION_ID") or "").strip()
+        secret = (os.environ.get("SQUARE_APPLICATION_SECRET") or "").strip()
         if not app_id or not secret:
-            raise OAuthError("SQUARE_APPLICATION_ID / SQUARE_APPLICATION_SECRET missing from .env")
+            raise OAuthError("Add SQUARE_APPLICATION_ID and SQUARE_APPLICATION_SECRET.")
+
+        configured_environment = (os.environ.get("SQUARE_ENVIRONMENT") or "").strip().lower()
+        if configured_environment and configured_environment not in {"sandbox", "production"}:
+            raise OAuthError("SQUARE_ENVIRONMENT must be sandbox or production.")
+
+        # Render users commonly enter only the two Square credentials. Infer the
+        # matching host instead of silently sending a production app to sandbox.
+        environment = configured_environment or (
+            "sandbox" if app_id.startswith("sandbox-") else "production"
+        )
+
+        redirect_url = (os.environ.get("SQUARE_REDIRECT_URL") or "").strip()
+        render_url = (os.environ.get("RENDER_EXTERNAL_URL") or "").strip().rstrip("/")
+        if not redirect_url and render_url:
+            redirect_url = f"{render_url}/api/square/callback"
+        if not redirect_url:
+            redirect_url = "http://localhost:8080/api/square/callback"
 
         return cls(
             application_id=app_id,
             application_secret=secret,
-            environment=(
-                "production" if os.environ.get("SQUARE_ENVIRONMENT") == "production" else "sandbox"
-            ),
-            redirect_url=os.environ.get(
-                "SQUARE_REDIRECT_URL", "http://localhost:8080/api/square/callback"
-            ),
+            environment=environment,
+            redirect_url=redirect_url,
         )
 
-    def validation_warnings(self) -> list[str]:
-        """Human-readable setup issues that make Square OAuth confusing."""
-        warnings: list[str] = []
+    def validation_errors(self) -> list[str]:
+        """Configuration problems that would make Square reject OAuth."""
+        errors: list[str] = []
         parsed = urlparse(self.redirect_url)
         app_id_is_sandbox = self.application_id.startswith("sandbox-")
         secret_is_sandbox = self.application_secret.startswith("sandbox-")
 
         if self.environment == "sandbox":
             if not app_id_is_sandbox or not secret_is_sandbox:
-                warnings.append("Sandbox mode needs the sandbox Application ID and Application Secret.")
-            warnings.append(
-                "Sandbox only connects Square sandbox seller test accounts. Launch a test seller "
-                "from the Square Developer Console before clicking Connect."
-            )
+                errors.append("Sandbox mode needs the sandbox Application ID and Application Secret.")
         else:
             if app_id_is_sandbox or secret_is_sandbox:
-                warnings.append("Production mode needs production Square credentials, not sandbox credentials.")
+                errors.append("Production mode needs production Square credentials, not sandbox credentials.")
             if parsed.scheme != "https":
-                warnings.append("Production Square OAuth needs an HTTPS redirect URL.")
+                errors.append("Production Square OAuth needs an HTTPS redirect URL.")
 
         if parsed.path != "/api/square/callback":
-            warnings.append("SQUARE_REDIRECT_URL must end with /api/square/callback.")
+            errors.append("SQUARE_REDIRECT_URL must end with /api/square/callback.")
+
+        return errors
+
+    def validation_warnings(self) -> list[str]:
+        """Errors plus useful non-blocking notes for the setup screen."""
+        warnings = self.validation_errors()
+        if self.environment == "sandbox":
+            warnings.append("Sandbox only connects Square sandbox seller test accounts.")
 
         return warnings
 
@@ -134,10 +151,15 @@ def exchange_code(config: OAuthConfig, code: str) -> dict:
         },
         timeout=30,
     )
-    body = response.json()
+    try:
+        body = response.json()
+    except ValueError as exc:
+        raise OAuthError(f"Square token exchange returned HTTP {response.status_code}.") from exc
     if response.status_code >= 400:
         detail = (body.get("errors") or [{}])[0].get("detail", "token exchange failed")
         raise OAuthError(detail)
+    if not body.get("access_token"):
+        raise OAuthError("Square did not return an access token.")
     return body
 
 

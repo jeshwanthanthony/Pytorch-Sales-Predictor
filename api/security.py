@@ -27,7 +27,10 @@ from pathlib import Path
 log = logging.getLogger("security")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-SECRET_FILE = PROJECT_ROOT / ".app-secret"
+WORKSPACES_ROOT = Path(os.environ.get("WORKSPACES_DIR", PROJECT_ROOT / "workspaces"))
+# The application directory is read-only for the non-root Docker user. Keep the
+# generated fallback next to the writable workspace data instead.
+SECRET_FILE = WORKSPACES_ROOT.parent / ".app-secret"
 
 # an oauth handshake that takes longer than this is not a real one
 OAUTH_STATE_MAX_AGE = 10 * 60
@@ -53,6 +56,7 @@ def app_secret() -> bytes:
         return SECRET_FILE.read_bytes().strip()
 
     generated = secrets.token_urlsafe(48).encode()
+    SECRET_FILE.parent.mkdir(parents=True, exist_ok=True)
     SECRET_FILE.write_bytes(generated)
     SECRET_FILE.chmod(0o600)
     log.info("generated a new app secret at %s", SECRET_FILE.name)

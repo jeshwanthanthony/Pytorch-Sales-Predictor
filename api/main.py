@@ -18,8 +18,9 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import quote_plus, urlparse
 
+import httpx
 from fastapi import Cookie, Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -110,12 +111,16 @@ def model_for(space: Workspace) -> ModelService:
 
 def _set_session(response: Response, merchant_id: str) -> None:
     """Sign the merchant id into the cookie so it cannot be forged."""
+    try:
+        secure = OAuthConfig.from_env().environment == "production"
+    except OAuthError:
+        secure = os.environ.get("SQUARE_ENVIRONMENT") == "production"
     response.set_cookie(
         SESSION_COOKIE,
         sign_session(merchant_id),
         httponly=True,
         samesite="lax",
-        secure=os.environ.get("SQUARE_ENVIRONMENT") == "production",
+        secure=secure,
         max_age=SESSION_MAX_AGE,
     )
 
@@ -163,7 +168,7 @@ def square_config() -> dict:
         return {"ok": False, "error": str(exc)}
 
     return {
-        "ok": not config.validation_warnings(),
+        "ok": not config.validation_errors(),
         "environment": config.environment,
         "application_id_prefix": config.application_id[:16],
         "redirect_url": config.redirect_url,
@@ -228,10 +233,7 @@ def square_connect(request: Request) -> RedirectResponse:
     except OAuthError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-    blocking = [
-        warning for warning in config.validation_warnings()
-        if "needs production Square credentials" in warning or "needs an HTTPS redirect" in warning
-    ]
+    blocking = config.validation_errors()
     if blocking:
         raise HTTPException(status_code=400, detail=" ".join(blocking))
 
@@ -264,7 +266,7 @@ def square_callback(
 ):
     """Square sends the user back here after they approve."""
     if error:
-        return RedirectResponse(f"/?error={error_description or error}", status_code=302)
+        return RedirectResponse(f"/?error={quote_plus(error_description or error)}", status_code=302)
     if not code or not state_token:
         return RedirectResponse("/?error=Square+did+not+send+a+code", status_code=302)
 
@@ -272,7 +274,7 @@ def square_callback(
     try:
         consume_oauth_state(state_token, nonce)
     except SecurityError as exc:
-        return RedirectResponse(f"/?error={exc}", status_code=302)
+        return RedirectResponse(f"/?error={quote_plus(str(exc))}", status_code=302)
 
     try:
         config = OAuthConfig.from_env()
@@ -283,8 +285,9 @@ def square_callback(
 
         locations = fetch_locations(config, tokens["access_token"])
         workspaces.get(merchant_id).ensure().save_token(tokens, locations, config.environment)
-    except (OAuthError, WorkspaceError) as exc:
-        return RedirectResponse(f"/?error={exc}", status_code=302)
+    except (OAuthError, WorkspaceError, httpx.HTTPError, KeyError) as exc:
+        log.warning("Square OAuth callback failed: %s", exc)
+        return RedirectResponse(f"/?error={quote_plus(str(exc))}", status_code=302)
 
     redirect = RedirectResponse("/?connected=1", status_code=302)
     _set_session(redirect, merchant_id)

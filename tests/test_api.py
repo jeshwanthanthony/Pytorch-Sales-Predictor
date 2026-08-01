@@ -235,7 +235,7 @@ class TestDashboardFiles:
     def test_index_is_served(self, client):
         response = client.get("/")
         assert response.status_code == 200
-        assert "Connect your Square account" in response.text
+        assert "Connect your Square account to continue" in response.text
 
     def test_index_ships_no_real_numbers(self, client):
         """The page contains placeholders only, never a figure."""
@@ -296,6 +296,32 @@ class TestAuthorizeUrl:
 
 
 class TestSquareConfig:
+    def test_render_infers_production_and_callback(self, monkeypatch):
+        from api.square_oauth import OAuthConfig
+
+        monkeypatch.setenv("SQUARE_APPLICATION_ID", "sq0idp-production-id")
+        monkeypatch.setenv("SQUARE_APPLICATION_SECRET", "sq0csp-production-secret")
+        monkeypatch.delenv("SQUARE_ENVIRONMENT", raising=False)
+        monkeypatch.delenv("SQUARE_REDIRECT_URL", raising=False)
+        monkeypatch.setenv("RENDER_EXTERNAL_URL", "https://restaurant-ai.onrender.com")
+
+        config = OAuthConfig.from_env()
+
+        assert config.environment == "production"
+        assert config.redirect_url == "https://restaurant-ai.onrender.com/api/square/callback"
+        assert config.validation_errors() == []
+
+    def test_sandbox_mode_with_production_credentials_is_blocked(self, client, monkeypatch):
+        monkeypatch.setenv("SQUARE_APPLICATION_ID", "sq0idp-production-id")
+        monkeypatch.setenv("SQUARE_APPLICATION_SECRET", "sq0csp-production-secret")
+        monkeypatch.setenv("SQUARE_ENVIRONMENT", "sandbox")
+        monkeypatch.setenv("SQUARE_REDIRECT_URL", "http://localhost:8080/api/square/callback")
+
+        response = client.get("/api/square/connect")
+
+        assert response.status_code == 400
+        assert "sandbox Application ID" in response.json()["detail"]
+
     def test_config_endpoint_does_not_expose_secret(self, client, monkeypatch):
         monkeypatch.setenv("SQUARE_APPLICATION_ID", "sandbox-app-id")
         monkeypatch.setenv("SQUARE_APPLICATION_SECRET", "sandbox-secret-value")

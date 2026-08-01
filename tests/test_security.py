@@ -35,6 +35,17 @@ def clean_state(monkeypatch, tmp_path):
 
 
 class TestSigning:
+    def test_fallback_secret_uses_writable_data_directory(self, monkeypatch, tmp_path):
+        secret_file = tmp_path / "data" / ".app-secret"
+        monkeypatch.delenv("APP_SECRET")
+        monkeypatch.setattr(security, "SECRET_FILE", secret_file)
+
+        generated = security.app_secret()
+
+        assert generated
+        assert secret_file.read_bytes() == generated
+        assert secret_file.stat().st_mode & 0o777 == 0o600
+
     def test_round_trip(self):
         assert unsign(sign("MERCHANT123")) == "MERCHANT123"
 
